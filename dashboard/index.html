@@ -1,1 +1,728 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Sales & Profit Analysis Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.3/papaparse.min.js"></script>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f1f3f6;
+    color: #222;
+}
+
+.container {
+    max-width: 1500px;
+    margin: auto;
+    padding: 25px;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.header h1 {
+    margin: 0;
+    color: #6f42c1;
+    font-size: 32px;
+}
+
+.header p {
+    color: #666;
+}
+
+.filters {
+    background: white;
+    padding: 18px;
+    border-radius: 12px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.filters label {
+    font-weight: bold;
+    margin-bottom: 6px;
+    display: block;
+}
+
+.filters select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 7px;
+    background: white;
+}
+
+.reset {
+    margin-top: 22px;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 7px;
+    background: #6f42c1;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin-bottom: 22px;
+}
+
+.kpi {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border-top: 5px solid #6f42c1;
+}
+
+.kpi h3 {
+    margin: 0 0 10px;
+    color: #555;
+    font-size: 15px;
+}
+
+.kpi .value {
+    font-size: 28px;
+    font-weight: bold;
+    color: #333;
+}
+
+.charts {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.chart-card {
+    background: white;
+    border-radius: 12px;
+    padding: 18px;
+    min-height: 360px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.chart-card h2 {
+    margin-top: 0;
+    font-size: 18px;
+    color: #444;
+}
+
+.chart-container {
+    position: relative;
+    height: 290px;
+}
+
+.footer {
+    text-align: center;
+    margin-top: 30px;
+    padding: 20px;
+    color: #777;
+}
+
+@media (max-width: 900px) {
+    .filters,
+    .kpis,
+    .charts {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .filters,
+    .kpis,
+    .charts {
+        grid-template-columns: 1fr;
+    }
+
+    .header h1 {
+        font-size: 24px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+        <h1>Sales & Profit Analysis Dashboard</h1>
+        <p>Interactive Sales Business Performance Analytics</p>
+    </div>
+
+    <!-- FILTERS -->
+    <div class="filters">
+
+        <div>
+            <label>Region</label>
+            <select id="regionFilter">
+                <option value="All">All</option>
+            </select>
+        </div>
+
+        <div>
+            <label>Category</label>
+            <select id="categoryFilter">
+                <option value="All">All</option>
+            </select>
+        </div>
+
+        <div>
+            <label>State</label>
+            <select id="stateFilter">
+                <option value="All">All</option>
+            </select>
+        </div>
+
+        <div>
+            <label>Payment Mode</label>
+            <select id="paymentFilter">
+                <option value="All">All</option>
+            </select>
+        </div>
+
+        <button class="reset" onclick="resetFilters()">Reset Filters</button>
+
+    </div>
+
+    <!-- KPI CARDS -->
+    <div class="kpis">
+
+        <div class="kpi">
+            <h3>Total Sales</h3>
+            <div class="value" id="totalSales">0</div>
+        </div>
+
+        <div class="kpi">
+            <h3>Total Profit</h3>
+            <div class="value" id="totalProfit">0</div>
+        </div>
+
+        <div class="kpi">
+            <h3>Profit Margin</h3>
+            <div class="value" id="profitMargin">0%</div>
+        </div>
+
+        <div class="kpi">
+            <h3>Total Orders</h3>
+            <div class="value" id="totalOrders">0</div>
+        </div>
+
+    </div>
+
+    <!-- CHARTS -->
+    <div class="charts">
+
+        <div class="chart-card">
+            <h2>Monthly Sales Trend</h2>
+            <div class="chart-container">
+                <canvas id="monthlyChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h2>Sales by Category</h2>
+            <div class="chart-container">
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h2>Profit by Region</h2>
+            <div class="chart-container">
+                <canvas id="regionChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h2>Top 10 Products by Profit</h2>
+            <div class="chart-container">
+                <canvas id="productChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h2>Order Status Distribution</h2>
+            <div class="chart-container">
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h2>Sales by Payment Mode</h2>
+            <div class="chart-container">
+                <canvas id="paymentChart"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        Sales Business Performance Analytics | Python • Excel • SQL • Power BI • HTML
+    </div>
+
+</div>
+
+<script>
+
+let allData = [];
+let charts = {};
+
+const csvFile = "../Sales_Business_Performance_Analytics_Cleaned.csv";
+
+Papa.parse(csvFile, {
+    download: true,
+    header: true,
+    skipEmptyLines: true,
+
+    complete: function(results) {
+
+        allData = results.data.map(row => {
+
+            return {
+                ...row,
+                Sales: Number(row.Sales) || 0,
+                Cost: Number(row.Cost) || 0,
+                Quantity: Number(row.Quantity) || 0
+            };
+
+        });
+
+        populateFilters();
+        updateDashboard();
+    },
+
+    error: function(error) {
+        console.error(error);
+        alert("CSV file could not be loaded.");
+    }
+});
+
+
+function uniqueValues(field) {
+
+    return [...new Set(
+        allData
+        .map(row => row[field])
+        .filter(value => value !== undefined && value !== "")
+    )].sort();
+
+}
+
+
+function populateFilters() {
+
+    fillSelect("regionFilter", "Region");
+    fillSelect("categoryFilter", "Category");
+    fillSelect("stateFilter", "State");
+    fillSelect("paymentFilter", "Payment_Mode");
+
+}
+
+
+function fillSelect(id, field) {
+
+    const select = document.getElementById(id);
+
+    uniqueValues(field).forEach(value => {
+
+        const option = document.createElement("option");
+
+        option.value = value;
+        option.textContent = value;
+
+        select.appendChild(option);
+
+    });
+
+}
+
+
+document.querySelectorAll("select").forEach(select => {
+
+    select.addEventListener("change", updateDashboard);
+
+});
+
+
+function getFilteredData() {
+
+    const region = document.getElementById("regionFilter").value;
+    const category = document.getElementById("categoryFilter").value;
+    const state = document.getElementById("stateFilter").value;
+    const payment = document.getElementById("paymentFilter").value;
+
+    return allData.filter(row => {
+
+        return (
+            (region === "All" || row.Region === region) &&
+            (category === "All" || row.Category === category) &&
+            (state === "All" || row.State === state) &&
+            (payment === "All" || row.Payment_Mode === payment)
+        );
+
+    });
+
+}
+
+
+function updateDashboard() {
+
+    const data = getFilteredData();
+
+    updateKPIs(data);
+    updateMonthlyChart(data);
+    updateCategoryChart(data);
+    updateRegionChart(data);
+    updateProductChart(data);
+    updateStatusChart(data);
+    updatePaymentChart(data);
+
+}
+
+
+function updateKPIs(data) {
+
+    const sales = data.reduce((sum, row) => sum + row.Sales, 0);
+
+    const cost = data.reduce((sum, row) => sum + row.Cost, 0);
+
+    const profit = sales - cost;
+
+    const margin = sales ? (profit / sales) * 100 : 0;
+
+    document.getElementById("totalSales").textContent =
+        formatMoney(sales);
+
+    document.getElementById("totalProfit").textContent =
+        formatMoney(profit);
+
+    document.getElementById("profitMargin").textContent =
+        margin.toFixed(2) + "%";
+
+    document.getElementById("totalOrders").textContent =
+        data.length.toLocaleString();
+
+}
+
+
+function formatMoney(value) {
+
+    if (value >= 10000000) {
+        return (value / 10000000).toFixed(2) + "M";
+    }
+
+    if (value >= 100000) {
+        return (value / 100000).toFixed(2) + "L";
+    }
+
+    return value.toLocaleString(
+        "en-IN",
+        {
+            maximumFractionDigits: 0
+        }
+    );
+
+}
+
+
+function getProfit(row) {
+
+    return row.Sales - row.Cost;
+
+}
+
+
+function destroyChart(name) {
+
+    if (charts[name]) {
+        charts[name].destroy();
+    }
+
+}
+
+
+function updateMonthlyChart(data) {
+
+    const monthly = {};
+
+    data.forEach(row => {
+
+        const date = new Date(row.Order_Date);
+
+        if (isNaN(date)) return;
+
+        const key =
+            date.toLocaleString(
+                "en-US",
+                {
+                    month: "short",
+                    year: "numeric"
+                }
+            );
+
+        monthly[key] = (monthly[key] || 0) + row.Sales;
+
+    });
+
+    const labels = Object.keys(monthly);
+
+    const values = Object.values(monthly);
+
+    destroyChart("monthly");
+
+    charts.monthly = new Chart(
+        document.getElementById("monthlyChart"),
+        {
+            type: "line",
+
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: "Sales",
+                    data: values,
+                    borderWidth: 3,
+                    tension: 0.3,
+                    fill: false
+                }]
+            },
+
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+
+        }
+    );
+
+}
+
+
+function updateCategoryChart(data) {
+
+    const result = {};
+
+    data.forEach(row => {
+
+        result[row.Category] =
+            (result[row.Category] || 0) + row.Sales;
+
+    });
+
+    destroyChart("category");
+
+    charts.category = new Chart(
+        document.getElementById("categoryChart"),
+        {
+            type: "bar",
+
+            data: {
+                labels: Object.keys(result),
+                datasets: [{
+                    label: "Sales",
+                    data: Object.values(result),
+                    borderWidth: 1
+                }]
+            },
+
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+
+        }
+    );
+
+}
+
+
+function updateRegionChart(data) {
+
+    const result = {};
+
+    data.forEach(row => {
+
+        result[row.Region] =
+            (result[row.Region] || 0) + getProfit(row);
+
+    });
+
+    destroyChart("region");
+
+    charts.region = new Chart(
+        document.getElementById("regionChart"),
+        {
+            type: "bar",
+
+            data: {
+                labels: Object.keys(result),
+                datasets: [{
+                    label: "Profit",
+                    data: Object.values(result),
+                    borderWidth: 1
+                }]
+            },
+
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+
+        }
+    );
+
+}
+
+
+function updateProductChart(data) {
+
+    const result = {};
+
+    data.forEach(row => {
+
+        result[row.Product] =
+            (result[row.Product] || 0) + getProfit(row);
+
+    });
+
+    const sorted =
+        Object.entries(result)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+
+    destroyChart("product");
+
+    charts.product = new Chart(
+        document.getElementById("productChart"),
+        {
+            type: "bar",
+
+            data: {
+                labels: sorted.map(x => x[0]),
+                datasets: [{
+                    label: "Profit",
+                    data: sorted.map(x => x[1]),
+                    borderWidth: 1
+                }]
+            },
+
+            options: {
+                indexAxis: "y",
+                responsive: true,
+                maintainAspectRatio: false
+            }
+
+        }
+    );
+
+}
+
+
+function updateStatusChart(data) {
+
+    const result = {};
+
+    data.forEach(row => {
+
+        result[row.Order_Status] =
+            (result[row.Order_Status] || 0) + 1;
+
+    });
+
+    destroyChart("status");
+
+    charts.status = new Chart(
+        document.getElementById("statusChart"),
+        {
+            type: "doughnut",
+
+            data: {
+                labels: Object.keys(result),
+                datasets: [{
+                    data: Object.values(result)
+                }]
+            },
+
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+
+        }
+    );
+
+}
+
+
+function updatePaymentChart(data) {
+
+    const result = {};
+
+    data.forEach(row => {
+
+        result[row.Payment_Mode] =
+            (result[row.Payment_Mode] || 0) + row.Sales;
+
+    });
+
+    destroyChart("payment");
+
+    charts.payment = new Chart(
+        document.getElementById("paymentChart"),
+        {
+            type: "bar",
+
+            data: {
+                labels: Object.keys(result),
+                datasets: [{
+                    label: "Sales",
+                    data: Object.values(result),
+                    borderWidth: 1
+                }]
+            },
+
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+
+        }
+    );
+
+}
+
+
+function resetFilters() {
+
+    document.getElementById("regionFilter").value = "All";
+    document.getElementById("categoryFilter").value = "All";
+    document.getElementById("stateFilter").value = "All";
+    document.getElementById("paymentFilter").value = "All";
+
+    updateDashboard();
+
+}
+
+</script>
+
+</body>
+</html>
