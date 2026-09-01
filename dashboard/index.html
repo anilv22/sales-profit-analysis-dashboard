@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -131,6 +130,12 @@ body {
     height: 290px;
 }
 
+.status {
+    text-align: center;
+    margin: 15px 0;
+    font-weight: bold;
+}
+
 .footer {
     text-align: center;
     margin-top: 30px;
@@ -169,7 +174,10 @@ body {
         <p>Interactive Sales Business Performance Analytics</p>
     </div>
 
-    <!-- FILTERS -->
+    <div id="statusMessage" class="status">
+        Loading dashboard data...
+    </div>
+
     <div class="filters">
 
         <div>
@@ -200,11 +208,12 @@ body {
             </select>
         </div>
 
-        <button class="reset" onclick="resetFilters()">Reset Filters</button>
+        <button class="reset" onclick="resetFilters()">
+            Reset Filters
+        </button>
 
     </div>
 
-    <!-- KPI CARDS -->
     <div class="kpis">
 
         <div class="kpi">
@@ -229,7 +238,6 @@ body {
 
     </div>
 
-    <!-- CHARTS -->
     <div class="charts">
 
         <div class="chart-card">
@@ -277,7 +285,8 @@ body {
     </div>
 
     <div class="footer">
-        Sales Business Performance Analytics | Python • Excel • SQL • Power BI • HTML
+        Sales Business Performance Analytics |
+        Python • Excel • SQL • Power BI • HTML
     </div>
 
 </div>
@@ -287,54 +296,73 @@ body {
 let allData = [];
 let charts = {};
 
-const csvFile = "../Sales_Business_Performance_Analytics_Cleaned.csv";
+const csvFile =
+"https://anilv22.github.io/sales-profit-analysis-dashboard/Sales_Business_Performance_Analytics_Cleaned.csv";
 
 Papa.parse(csvFile, {
+
     download: true,
     header: true,
     skipEmptyLines: true,
 
     complete: function(results) {
 
-        allData = results.data.map(row => {
+        console.log("CSV loaded:", results.data.length);
 
-            return {
-                ...row,
-                Sales: Number(row.Sales) || 0,
-                Cost: Number(row.Cost) || 0,
-                Quantity: Number(row.Quantity) || 0
-            };
+        if (!results.data || results.data.length === 0) {
 
-        });
+            document.getElementById("statusMessage").textContent =
+                "CSV loaded, but no data was found.";
+
+            return;
+        }
+
+        allData = results.data.map(row => ({
+
+            ...row,
+
+            Sales: Number(row.Sales) || 0,
+            Cost: Number(row.Cost) || 0,
+            Quantity: Number(row.Quantity) || 0,
+            Discount: Number(row.Discount) || 0
+
+        }));
+
+        document.getElementById("statusMessage").textContent =
+            "Dashboard loaded successfully • " +
+            allData.length.toLocaleString() +
+            " orders";
 
         populateFilters();
         updateDashboard();
+
     },
 
     error: function(error) {
-        console.error(error);
-        alert("CSV file could not be loaded.");
+
+        console.error("CSV loading error:", error);
+
+        document.getElementById("statusMessage").textContent =
+            "Unable to load CSV data. Please check the CSV file path.";
+
     }
+
 });
 
 
 function uniqueValues(field) {
 
     return [...new Set(
+
         allData
-        .map(row => row[field])
-        .filter(value => value !== undefined && value !== "")
+            .map(row => row[field])
+            .filter(value =>
+                value !== undefined &&
+                value !== null &&
+                value !== ""
+            )
+
     )].sort();
-
-}
-
-
-function populateFilters() {
-
-    fillSelect("regionFilter", "Region");
-    fillSelect("categoryFilter", "Category");
-    fillSelect("stateFilter", "State");
-    fillSelect("paymentFilter", "Payment_Mode");
 
 }
 
@@ -357,6 +385,16 @@ function fillSelect(id, field) {
 }
 
 
+function populateFilters() {
+
+    fillSelect("regionFilter", "Region");
+    fillSelect("categoryFilter", "Category");
+    fillSelect("stateFilter", "State");
+    fillSelect("paymentFilter", "Payment_Mode");
+
+}
+
+
 document.querySelectorAll("select").forEach(select => {
 
     select.addEventListener("change", updateDashboard);
@@ -366,21 +404,29 @@ document.querySelectorAll("select").forEach(select => {
 
 function getFilteredData() {
 
-    const region = document.getElementById("regionFilter").value;
-    const category = document.getElementById("categoryFilter").value;
-    const state = document.getElementById("stateFilter").value;
-    const payment = document.getElementById("paymentFilter").value;
+    const region =
+        document.getElementById("regionFilter").value;
 
-    return allData.filter(row => {
+    const category =
+        document.getElementById("categoryFilter").value;
 
-        return (
-            (region === "All" || row.Region === region) &&
-            (category === "All" || row.Category === category) &&
-            (state === "All" || row.State === state) &&
-            (payment === "All" || row.Payment_Mode === payment)
-        );
+    const state =
+        document.getElementById("stateFilter").value;
 
-    });
+    const payment =
+        document.getElementById("paymentFilter").value;
+
+    return allData.filter(row => (
+
+        (region === "All" || row.Region === region) &&
+
+        (category === "All" || row.Category === category) &&
+
+        (state === "All" || row.State === state) &&
+
+        (payment === "All" || row.Payment_Mode === payment)
+
+    ));
 
 }
 
@@ -402,13 +448,16 @@ function updateDashboard() {
 
 function updateKPIs(data) {
 
-    const sales = data.reduce((sum, row) => sum + row.Sales, 0);
+    const sales =
+        data.reduce((sum, row) => sum + row.Sales, 0);
 
-    const cost = data.reduce((sum, row) => sum + row.Cost, 0);
+    const cost =
+        data.reduce((sum, row) => sum + row.Cost, 0);
 
     const profit = sales - cost;
 
-    const margin = sales ? (profit / sales) * 100 : 0;
+    const margin =
+        sales ? (profit / sales) * 100 : 0;
 
     document.getElementById("totalSales").textContent =
         formatMoney(sales);
@@ -428,19 +477,20 @@ function updateKPIs(data) {
 function formatMoney(value) {
 
     if (value >= 10000000) {
+
         return (value / 10000000).toFixed(2) + "M";
+
     }
 
     if (value >= 100000) {
+
         return (value / 100000).toFixed(2) + "L";
+
     }
 
-    return value.toLocaleString(
-        "en-IN",
-        {
-            maximumFractionDigits: 0
-        }
-    );
+    return value.toLocaleString("en-IN", {
+        maximumFractionDigits: 0
+    });
 
 }
 
@@ -455,7 +505,9 @@ function getProfit(row) {
 function destroyChart(name) {
 
     if (charts[name]) {
+
         charts[name].destroy();
+
     }
 
 }
@@ -472,46 +524,59 @@ function updateMonthlyChart(data) {
         if (isNaN(date)) return;
 
         const key =
-            date.toLocaleString(
-                "en-US",
-                {
-                    month: "short",
-                    year: "numeric"
-                }
-            );
+            date.toLocaleString("en-US", {
+                month: "short",
+                year: "numeric"
+            });
 
-        monthly[key] = (monthly[key] || 0) + row.Sales;
+        monthly[key] =
+            (monthly[key] || 0) + row.Sales;
 
     });
 
     const labels = Object.keys(monthly);
-
     const values = Object.values(monthly);
 
     destroyChart("monthly");
 
     charts.monthly = new Chart(
+
         document.getElementById("monthlyChart"),
+
         {
+
             type: "line",
 
             data: {
+
                 labels: labels,
+
                 datasets: [{
+
                     label: "Sales",
+
                     data: values,
+
                     borderWidth: 3,
+
                     tension: 0.3,
+
                     fill: false
+
                 }]
+
             },
 
             options: {
+
                 responsive: true,
+
                 maintainAspectRatio: false
+
             }
 
         }
+
     );
 
 }
@@ -531,25 +596,39 @@ function updateCategoryChart(data) {
     destroyChart("category");
 
     charts.category = new Chart(
+
         document.getElementById("categoryChart"),
+
         {
+
             type: "bar",
 
             data: {
+
                 labels: Object.keys(result),
+
                 datasets: [{
+
                     label: "Sales",
+
                     data: Object.values(result),
+
                     borderWidth: 1
+
                 }]
+
             },
 
             options: {
+
                 responsive: true,
+
                 maintainAspectRatio: false
+
             }
 
         }
+
     );
 
 }
@@ -569,25 +648,39 @@ function updateRegionChart(data) {
     destroyChart("region");
 
     charts.region = new Chart(
+
         document.getElementById("regionChart"),
+
         {
+
             type: "bar",
 
             data: {
+
                 labels: Object.keys(result),
+
                 datasets: [{
+
                     label: "Profit",
+
                     data: Object.values(result),
+
                     borderWidth: 1
+
                 }]
+
             },
 
             options: {
+
                 responsive: true,
+
                 maintainAspectRatio: false
+
             }
 
         }
+
     );
 
 }
@@ -606,32 +699,47 @@ function updateProductChart(data) {
 
     const sorted =
         Object.entries(result)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 10);
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10);
 
     destroyChart("product");
 
     charts.product = new Chart(
+
         document.getElementById("productChart"),
+
         {
+
             type: "bar",
 
             data: {
+
                 labels: sorted.map(x => x[0]),
+
                 datasets: [{
+
                     label: "Profit",
+
                     data: sorted.map(x => x[1]),
+
                     borderWidth: 1
+
                 }]
+
             },
 
             options: {
+
                 indexAxis: "y",
+
                 responsive: true,
+
                 maintainAspectRatio: false
+
             }
 
         }
+
     );
 
 }
@@ -651,23 +759,35 @@ function updateStatusChart(data) {
     destroyChart("status");
 
     charts.status = new Chart(
+
         document.getElementById("statusChart"),
+
         {
+
             type: "doughnut",
 
             data: {
+
                 labels: Object.keys(result),
+
                 datasets: [{
+
                     data: Object.values(result)
+
                 }]
+
             },
 
             options: {
+
                 responsive: true,
+
                 maintainAspectRatio: false
+
             }
 
         }
+
     );
 
 }
@@ -687,25 +807,39 @@ function updatePaymentChart(data) {
     destroyChart("payment");
 
     charts.payment = new Chart(
+
         document.getElementById("paymentChart"),
+
         {
+
             type: "bar",
 
             data: {
+
                 labels: Object.keys(result),
+
                 datasets: [{
+
                     label: "Sales",
+
                     data: Object.values(result),
+
                     borderWidth: 1
+
                 }]
+
             },
 
             options: {
+
                 responsive: true,
+
                 maintainAspectRatio: false
+
             }
 
         }
+
     );
 
 }
@@ -714,8 +848,11 @@ function updatePaymentChart(data) {
 function resetFilters() {
 
     document.getElementById("regionFilter").value = "All";
+
     document.getElementById("categoryFilter").value = "All";
+
     document.getElementById("stateFilter").value = "All";
+
     document.getElementById("paymentFilter").value = "All";
 
     updateDashboard();
